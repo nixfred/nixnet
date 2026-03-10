@@ -1,0 +1,11 @@
+# nixnet public repo — engine only
+# The private world repo lives separately
+.env
+*.log
+
+# Working docs (local only, not part of the engine)
+collaboration_loop.md
+claude_code_session_rules.md
+nixnet_mvp_build_brief.md
+nixnet_repo_and_data_model.md
+nixnet_vision_and_working_context.md

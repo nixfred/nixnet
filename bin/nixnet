@@ -1,0 +1,65 @@
+#!/usr/bin/env bash
+# nixnet — host identity and continuity framework
+# Main CLI dispatch
+
+set -euo pipefail
+
+NIXNET_VERSION="0.1.0"
+
+# Resolve the repo root (parent of bin/)
+NIXNET_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+# Where the private world lives (override with env var)
+NIXNET_WORLD="${NIXNET_WORLD:-${NIXNET_ROOT}/world}"
+
+# Where local runtime state lives on this machine
+NIXNET_LOCAL="${NIXNET_LOCAL:-${HOME}/.local/nixnet}"
+
+export NIXNET_ROOT NIXNET_WORLD NIXNET_LOCAL NIXNET_VERSION
+
+# Source shared libraries
+for lib in "${NIXNET_ROOT}/lib"/*.sh; do
+    # shellcheck source=/dev/null
+    source "$lib"
+done
+
+usage() {
+    cat <<EOF
+nixnet ${NIXNET_VERSION} — host identity and continuity framework
+
+Usage: nixnet <command> [options]
+
+Commands:
+  enroll      Enroll this machine into nixnet
+  apply       Apply layered configuration (convergent)
+  status      Show current host identity and state
+  lifecycle   Manage host identity lifecycle state
+  identity    Show host identity details
+  doctor      Validate local nixnet health
+  help        Show this help
+
+Environment:
+  NIXNET_WORLD   Path to private world directory (default: ./world/)
+  NIXNET_LOCAL   Path to local runtime (default: ~/.local/nixnet/)
+
+EOF
+}
+
+cmd="${1:-help}"
+shift || true
+
+case "$cmd" in
+    enroll)     cmd_enroll "$@" ;;
+    apply)      cmd_apply "$@" ;;
+    status)     cmd_status "$@" ;;
+    lifecycle)  cmd_lifecycle "$@" ;;
+    identity)   cmd_identity "$@" ;;
+    doctor)     cmd_doctor "$@" ;;
+    help|--help|-h) usage ;;
+    version|--version|-v) echo "nixnet ${NIXNET_VERSION}" ;;
+    *)
+        log_error "Unknown command: ${cmd}"
+        usage
+        exit 1
+        ;;
+esac
