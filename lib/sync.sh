@@ -92,13 +92,17 @@ sync_auto_commit() {
         "hosts/${name}/files.yaml"
     )
 
-    # Also include any captured dotfiles
+    # Also include any captured dotfiles (dotglob needed for .bashrc etc.)
     if [[ -d "${NIXNET_WORLD}/hosts/${name}/files" ]]; then
+        local _old_dotglob
+        _old_dotglob="$(shopt -p dotglob 2>/dev/null || true)"
+        shopt -s dotglob
         local f
         for f in "${NIXNET_WORLD}/hosts/${name}/files"/*; do
             [[ -f "$f" ]] || continue
             state_files+=("hosts/${name}/files/$(basename "$f")")
         done
+        eval "$_old_dotglob"
     fi
 
     local -a changed=()
