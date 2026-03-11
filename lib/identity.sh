@@ -90,7 +90,13 @@ check_reclaim_safety() {
     # Same machine — safe (re-enrollment)
     [[ "$existing_machine_id" != "$my_machine_id" ]] || return 0
 
-    # Different machine holds this identity
+    # Dormant identity — safe to reclaim without confirmation
+    if [[ "$existing_lifecycle" == "dormant" ]]; then
+        log_info "Identity '${name}' is dormant — reclaiming automatically"
+        return 0
+    fi
+
+    # Different machine holds this identity (active/retired)
     log_warn "Identity '${name}' is currently claimed by another machine:"
     log_warn "  Machine ID: ${existing_machine_id}"
     log_warn "  Hostname:   ${existing_hostname}"
