@@ -41,6 +41,7 @@ Usage: nixnet <command> [options]
 Commands:
   enroll      Enroll this machine into nixnet
   apply       Apply layered configuration (convergent)
+  capture     Capture current environment to world repo (dotfiles + packages)
   sync        Sync private world repo with remote (pull/push)
   status      Show current host identity and state
   lifecycle   Manage host identity lifecycle state
@@ -61,6 +62,7 @@ shift || true
 case "$cmd" in
     enroll)     cmd_enroll "$@" ;;
     apply)      cmd_apply "$@" ;;
+    capture)    cmd_capture "$@" ;;
     sync)       cmd_sync "$@" ;;
     status)     cmd_status "$@" ;;
     lifecycle)  cmd_lifecycle "$@" ;;

@@ -47,6 +47,10 @@ cmd_enroll() {
             resolved_world="$(cd "$NIXNET_WORLD" && pwd)"
             write_local_config "WORLD_PATH" "$resolved_world"
 
+            # Re-capture environment state
+            log_info "Recapturing environment..."
+            capture_environment "$identity"
+
             # Re-apply config
             log_info "Running apply..."
             cmd_apply
@@ -87,8 +91,8 @@ cmd_enroll() {
     write_local_config "WORLD_PATH" "$resolved_world"
     log_ok "Saved world path: ${resolved_world}"
 
-    # Step 4: Capture existing state (always — every machine has state worth knowing)
-    enroll_snapshot "$identity"
+    # Step 4: Capture environment into world repo (packages + dotfiles)
+    capture_environment "$identity"
 
     # Step 5: Apply configuration
     log_info "Running initial apply..."
@@ -98,32 +102,4 @@ cmd_enroll() {
     run_hooks "$identity" "post-enroll"
 
     log_ok "Enrollment complete: ${identity}"
-}
-
-# Snapshot existing machine state during enrollment
-enroll_snapshot() {
-    local identity="$1"
-    local snapshot_dir="${NIXNET_LOCAL}/snapshot"
-    mkdir -p "$snapshot_dir"
-
-    log_info "Capturing existing machine state..."
-
-    # Snapshot installed packages
-    dpkg --get-selections | grep -v deinstall | awk '{print $1}' \
-        > "${snapshot_dir}/packages.txt"
-    local pkg_count
-    pkg_count="$(wc -l < "${snapshot_dir}/packages.txt")"
-    log_ok "Captured ${pkg_count} installed packages"
-
-    # Snapshot key config file checksums
-    local checksum_file="${snapshot_dir}/checksums.txt"
-    : > "$checksum_file"
-    for f in ~/.bashrc ~/.bash_profile ~/.profile ~/.gitconfig ~/.ssh/config; do
-        if [[ -f "$f" ]]; then
-            sha256sum "$f" >> "$checksum_file"
-        fi
-    done
-    log_ok "Captured config checksums"
-
-    log_info "Snapshot saved to: ${snapshot_dir}/"
 }
