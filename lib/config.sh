@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 # nixnet — layered configuration resolution and convergent apply
+#
+# Layer model: global → host (roles removed in v0.3.0)
 
 cmd_apply() {
     local dry_run=false
@@ -12,17 +14,16 @@ cmd_apply() {
 
     is_enrolled || die "Not enrolled. Run: nixnet enroll"
 
-    local name role
+    local name
     name="$(current_identity)"
-    role="$(current_role)"
 
-    log_info "Applying configuration for ${name} (role: ${role})"
+    log_info "Applying configuration for ${name}"
 
-    # Phase 1: Resolve layers
+    # Phase 1: Resolve layers (global → host)
     local resolved_dir="${NIXNET_LOCAL}/cache/resolved"
     mkdir -p "$resolved_dir"
-    resolve_packages "$name" "$role" "$resolved_dir"
-    resolve_files "$name" "$role" "$resolved_dir"
+    resolve_packages "$name" "$resolved_dir"
+    resolve_files "$name" "$resolved_dir"
 
     # Phase 2: Apply (convergent)
     if $dry_run; then
@@ -33,7 +34,7 @@ cmd_apply() {
 
     # Phase 3: Run hooks
     if ! $dry_run; then
-        run_hooks "$name" "$role" "post-apply"
+        run_hooks "$name" "post-apply"
     fi
 
     # Record apply
@@ -41,7 +42,6 @@ cmd_apply() {
         cat > "${NIXNET_LOCAL}/state/last-apply.json" <<EOF
 {
   "identity": "${name}",
-  "role": "${role}",
   "applied_at": "$(now_iso)",
   "result": "success"
 }
@@ -52,7 +52,7 @@ EOF
 
 # Resolve packages from all layers into a single union list
 resolve_packages() {
-    local name="$1" role="$2" resolved_dir="$3"
+    local name="$1" resolved_dir="$2"
     local merged="${resolved_dir}/packages.list"
 
     : > "$merged"  # truncate
@@ -60,10 +60,6 @@ resolve_packages() {
     # Global packages
     local global_pkg="${NIXNET_WORLD}/global/packages.yaml"
     [[ -f "$global_pkg" ]] && yaml_read_list "$global_pkg" "packages" >> "$merged"
-
-    # Role packages
-    local role_pkg="${NIXNET_WORLD}/roles/${role}/packages.yaml"
-    [[ -f "$role_pkg" ]] && yaml_read_list "$role_pkg" "packages" >> "$merged"
 
     # Host packages
     local host_pkg="${NIXNET_WORLD}/hosts/${name}/packages.yaml"
@@ -75,9 +71,9 @@ resolve_packages() {
     fi
 }
 
-# Resolve files from all layers (later layers win for same dest)
+# Resolve files from all layers (host wins over global for same dest)
 resolve_files() {
-    local name="$1" role="$2" resolved_dir="$3"
+    local name="$1" resolved_dir="$2"
     local merged="${resolved_dir}/files.list"
 
     : > "$merged"
@@ -86,7 +82,6 @@ resolve_files() {
     local layer_files
     for layer_files in \
         "${NIXNET_WORLD}/global/files.yaml" \
-        "${NIXNET_WORLD}/roles/${role}/files.yaml" \
         "${NIXNET_WORLD}/hosts/${name}/files.yaml"; do
         if [[ -f "$layer_files" ]]; then
             echo "$layer_files" >> "$merged"
@@ -167,18 +162,6 @@ apply_files() {
                     continue
                 fi
 
-                # Adopt-mode safety: skip existing conflicting files
-                if [[ "${NIXNET_ADOPT:-0}" == "1" ]]; then
-                    if [[ -e "$dest" && ! -L "$dest" ]]; then
-                        log_warn "ADOPT: Skipping existing file: ${dest} (will not overwrite)"
-                        continue
-                    fi
-                    if [[ -L "$dest" && "$(readlink "$dest")" != "$full_src" ]]; then
-                        log_warn "ADOPT: Skipping existing symlink: ${dest} (points elsewhere)"
-                        continue
-                    fi
-                fi
-
                 # Ensure parent directory exists
                 mkdir -p "$(dirname "$dest")"
 
@@ -218,11 +201,10 @@ apply_files() {
 
 # Run hooks from all layers for a given phase
 run_hooks() {
-    local name="$1" role="$2" phase="$3"
+    local name="$1" phase="$2"
 
     for hook_dir in \
         "${NIXNET_WORLD}/global/hooks" \
-        "${NIXNET_WORLD}/roles/${role}/hooks" \
         "${NIXNET_WORLD}/hosts/${name}/hooks"; do
         local hook="${hook_dir}/${phase}"
         if [[ -x "$hook" ]]; then

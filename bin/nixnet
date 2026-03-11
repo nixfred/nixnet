@@ -4,24 +4,33 @@
 
 set -euo pipefail
 
-NIXNET_VERSION="0.1.0"
+NIXNET_VERSION="0.3.0"
 
 # Resolve the repo root (parent of bin/)
 NIXNET_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-# Where the private world lives (override with env var)
-NIXNET_WORLD="${NIXNET_WORLD:-${NIXNET_ROOT}/world}"
-
 # Where local runtime state lives on this machine
-NIXNET_LOCAL="${NIXNET_LOCAL:-${HOME}/.local/nixnet}"
+NIXNET_LOCAL="${NIXNET_LOCAL:-${HOME}/.nixnet}"
 
-export NIXNET_ROOT NIXNET_WORLD NIXNET_LOCAL NIXNET_VERSION
-
-# Source shared libraries
+# Source shared libraries (they define functions only, safe before world discovery)
 for lib in "${NIXNET_ROOT}/lib"/*.sh; do
     # shellcheck source=/dev/null
     source "$lib"
 done
+
+# Discover world repo: env var → saved local config → ./world fallback
+if [[ -n "${NIXNET_WORLD:-}" ]]; then
+    : # explicit env var — use as-is
+else
+    _saved_world="$(read_local_config WORLD_PATH 2>/dev/null || true)"
+    if [[ -n "$_saved_world" ]]; then
+        NIXNET_WORLD="$_saved_world"
+    else
+        NIXNET_WORLD="${NIXNET_ROOT}/world"
+    fi
+fi
+
+export NIXNET_ROOT NIXNET_WORLD NIXNET_LOCAL NIXNET_VERSION
 
 usage() {
     cat <<EOF
@@ -32,6 +41,7 @@ Usage: nixnet <command> [options]
 Commands:
   enroll      Enroll this machine into nixnet
   apply       Apply layered configuration (convergent)
+  sync        Sync private world repo with remote (pull/push)
   status      Show current host identity and state
   lifecycle   Manage host identity lifecycle state
   identity    Show host identity details
@@ -39,8 +49,8 @@ Commands:
   help        Show this help
 
 Environment:
-  NIXNET_WORLD   Path to private world directory (default: ./world/)
-  NIXNET_LOCAL   Path to local runtime (default: ~/.local/nixnet/)
+  NIXNET_WORLD   Path to private world directory (auto-discovered after enrollment)
+  NIXNET_LOCAL   Path to local runtime (default: ~/.nixnet/)
 
 EOF
 }
@@ -51,6 +61,7 @@ shift || true
 case "$cmd" in
     enroll)     cmd_enroll "$@" ;;
     apply)      cmd_apply "$@" ;;
+    sync)       cmd_sync "$@" ;;
     status)     cmd_status "$@" ;;
     lifecycle)  cmd_lifecycle "$@" ;;
     identity)   cmd_identity "$@" ;;

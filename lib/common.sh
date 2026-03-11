@@ -95,20 +95,30 @@ current_identity() {
     fi
 }
 
-# Read current role from local claim
-current_role() {
-    if is_enrolled; then
-        if command -v jq &>/dev/null; then
-            jq -r '.role' "${NIXNET_LOCAL}/identity.json"
-        else
-            grep '"role"' "${NIXNET_LOCAL}/identity.json" | sed 's/.*: *"\(.*\)".*/\1/'
-        fi
-    else
-        echo ""
-    fi
-}
-
 # Timestamp in ISO 8601
 now_iso() {
     date -u +"%Y-%m-%dT%H:%M:%SZ"
+}
+
+# Read a value from the local nixnet config file (key=value format)
+# Usage: read_local_config KEY
+read_local_config() {
+    local key="$1"
+    local config="${NIXNET_LOCAL}/config"
+    [[ -f "$config" ]] || return 1
+    grep "^${key}=" "$config" 2>/dev/null | head -1 | cut -d= -f2-
+}
+
+# Write a value to the local nixnet config file (key=value format)
+# Creates the file and parent dirs if needed. Updates existing key or appends.
+# Usage: write_local_config KEY VALUE
+write_local_config() {
+    local key="$1" value="$2"
+    local config="${NIXNET_LOCAL}/config"
+    mkdir -p "$(dirname "$config")"
+    if [[ -f "$config" ]] && grep -q "^${key}=" "$config" 2>/dev/null; then
+        sed -i "s|^${key}=.*|${key}=${value}|" "$config"
+    else
+        echo "${key}=${value}" >> "$config"
+    fi
 }

@@ -17,7 +17,6 @@ cmd_doctor() {
     else
         doctor_fail "No identity claimed — run: nixnet enroll"
         failed=$((failed + 1))
-        # Can't check much else without enrollment
         doctor_summary $checks $passed $warned $failed
         return 1
     fi
@@ -57,19 +56,7 @@ cmd_doctor() {
         failed=$((failed + 1))
     fi
 
-    # Check 5: Role directory exists
-    checks=$((checks + 1))
-    local role
-    role="$(current_role)"
-    if [[ -d "${NIXNET_WORLD}/roles/${role}" ]]; then
-        doctor_pass "Role directory exists: ${role}"
-        passed=$((passed + 1))
-    else
-        doctor_warn "Role directory missing: ${NIXNET_WORLD}/roles/${role}"
-        warned=$((warned + 1))
-    fi
-
-    # Check 6: Layer resolution (global exists)
+    # Check 5: Global layer exists
     checks=$((checks + 1))
     if [[ -d "${NIXNET_WORLD}/global" ]]; then
         doctor_pass "Global layer exists"
@@ -79,7 +66,7 @@ cmd_doctor() {
         failed=$((failed + 1))
     fi
 
-    # Check 7: Last apply recorded
+    # Check 6: Last apply recorded
     checks=$((checks + 1))
     local last_apply="${NIXNET_LOCAL}/state/last-apply.json"
     if [[ -f "$last_apply" ]]; then
@@ -96,7 +83,7 @@ cmd_doctor() {
         warned=$((warned + 1))
     fi
 
-    # Check 8: yq dependency
+    # Check 7: yq dependency
     checks=$((checks + 1))
     if command -v yq &>/dev/null; then
         local yq_version
@@ -109,7 +96,7 @@ cmd_doctor() {
         warned=$((warned + 1))
     fi
 
-    # Check 9: Managed symlinks intact
+    # Check 8: Managed symlinks intact
     checks=$((checks + 1))
     local broken_links=0
     if [[ -f "${NIXNET_LOCAL}/cache/resolved/files.list" ]]; then

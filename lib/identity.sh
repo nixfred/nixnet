@@ -20,7 +20,7 @@ cmd_identity() {
 
 # Create a new host identity manifest
 create_identity() {
-    local name="$1" role="$2"
+    local name="$1"
     local host_dir="${NIXNET_WORLD}/hosts/${name}"
     local identity_file="${host_dir}/identity.yaml"
 
@@ -29,7 +29,7 @@ create_identity() {
         return 0
     fi
 
-    mkdir -p "${host_dir}"/{files,hooks,secrets}
+    mkdir -p "${host_dir}"/{files,hooks}
 
     local machine_id hostname
     machine_id="$(get_machine_id)"
@@ -37,7 +37,6 @@ create_identity() {
 
     cat > "$identity_file" <<EOF
 name: ${name}
-role: ${role}
 lifecycle: active
 description: ""
 tags: []
@@ -55,7 +54,7 @@ EOF
     # Create empty layer files so the structure is complete
     [[ -f "${host_dir}/packages.yaml" ]] || echo "packages: []" > "${host_dir}/packages.yaml"
 
-    log_ok "Created identity: ${name} (role: ${role})"
+    log_ok "Created identity: ${name}"
 }
 
 # Check if an identity is currently claimed by a different machine
@@ -174,7 +173,7 @@ update_claim() {
 
 # Write the local identity claim file
 write_local_claim() {
-    local name="$1" role="$2"
+    local name="$1"
     local machine_id
     machine_id="$(get_machine_id)"
 
@@ -183,7 +182,6 @@ write_local_claim() {
     cat > "${NIXNET_LOCAL}/identity.json" <<EOF
 {
   "name": "${name}",
-  "role": "${role}",
   "machine_id": "${machine_id}",
   "enrolled_at": "$(now_iso)",
   "nixnet_version": "${NIXNET_VERSION}"

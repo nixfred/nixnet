@@ -24,7 +24,7 @@ lifecycle_set() {
     local new_state="${1:-}"
     [[ -n "$new_state" ]] || die "Usage: nixnet lifecycle set <state>"
 
-    is_enrolled || die "Not enrolled. Run: nixnet enroll"
+    is_enrolled || die "Not enrolled"
 
     # Validate state
     local valid=false

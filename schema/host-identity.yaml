@@ -2,18 +2,13 @@
 # This file documents the expected structure — it is not enforced programmatically in v1.
 
 # Every host identity lives at: world/hosts/<name>/identity.yaml
+# Identity name always equals hostname.
 
 schema:
   name:
     type: string
     required: true
-    description: "Unique host identity name (e.g., vic, fnix, kivm)"
-
-  role:
-    type: string
-    required: true
-    description: "Role name matching a directory in world/roles/"
-    examples: [primary, server, lab, throwaway]
+    description: "Host identity name (always equals hostname)"
 
   lifecycle:
     type: string
@@ -71,9 +66,10 @@ schema:
 #   - Apt packages (install only, never remove)
 #   - Dotfiles and config files (symlink for user-space, copy for system paths)
 #   - Lifecycle state tracking (active, dormant, retired, destroyed)
-#   - Local runtime metadata (~/.local/nixnet/)
-#   - Enrollment (fresh and adopt)
-#   - Layer resolution (global → role → host, union merge)
+#   - Local runtime metadata (~/.nixnet/)
+#   - Enrollment (idempotent, self-healing on re-run)
+#   - Layer resolution (global → host, union merge)
+#   - World repo sync (auto-commit state, pull/push)
 #   - Basic health checks (nixnet doctor)
 #
 # DOES NOT MANAGE:
@@ -90,8 +86,9 @@ schema:
 # ══════════════════════════════════════════════
 
 # Notes:
+# - Identity name always equals hostname
 # - A host identity can exist without a claim (lifecycle: dormant)
 # - Destroying a VM moves identity to dormant, NOT destroyed
 # - Only explicit 'nixnet lifecycle set destroyed' terminates an identity
 # - The claim block is updated when a new machine claims the identity
-# - Old claims are not automatically archived in v1 (future: claim history)
+# - Old claims are archived to claim-history.txt

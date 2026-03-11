@@ -4,13 +4,12 @@
 cmd_status() {
     if ! is_enrolled; then
         log_info "Not enrolled"
-        echo "  Run: nixnet enroll --identity NAME --role ROLE"
+        echo "  Run: nixnet enroll"
         return 0
     fi
 
-    local name role
+    local name
     name="$(current_identity)"
-    role="$(current_role)"
 
     local identity_file="${NIXNET_WORLD}/hosts/${name}/identity.yaml"
     local lifecycle="unknown"
@@ -30,7 +29,6 @@ cmd_status() {
     echo -e "${_BOLD}nixnet status${_RESET}"
     echo "---"
     echo "  Identity:   ${name}"
-    echo "  Role:       ${role}"
     echo "  Lifecycle:  ${lifecycle}"
     echo "  Machine ID: $(get_machine_id)"
     echo "  Hostname:   $(hostname)"
