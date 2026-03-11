@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
 # nixnet — sync private world repo with remote
 #
-# 5-step sequence:
+# 6-step sequence:
 #   1. validate   — world is a git repo with a remote
-#   2. auto-commit — commit allowed host state files if changed
-#   3. dirty check — two-tier policy on remaining uncommitted files
-#   4. pull        — git pull --rebase from remote
-#   5. push        — git push to remote
+#   2. capture    — recapture dotfiles and packages from live system
+#   3. auto-commit — commit host state and captured files if changed
+#   4. dirty check — two-tier policy on remaining uncommitted files
+#   5. pull        — git pull --rebase from remote
+#   6. push        — git push to remote
 #
 # Two-tier dirty file policy:
 #   Tier 1 (warn-continue): dirty files in hosts/{self}/ outside state files
@@ -31,25 +32,33 @@ cmd_sync() {
     echo ""
 
     # Step 1: Validate
-    log_info "step 1/5: validating world repo..."
+    log_info "step 1/6: validating world repo..."
     sync_validate
 
-    # Step 2: Auto-commit host state
-    log_info "step 2/5: checking for host state changes..."
+    # Step 2: Capture current environment
+    log_info "step 2/6: capturing environment..."
+    if ! $dry_run; then
+        capture_environment "$name"
+    else
+        log_info "would recapture dotfiles and packages"
+    fi
+
+    # Step 3: Auto-commit host state
+    log_info "step 3/6: checking for host state changes..."
     sync_auto_commit "$name" "$dry_run"
 
-    # Step 3: Dirty file check (two-tier)
-    log_info "step 3/5: checking for dirty files..."
+    # Step 4: Dirty file check (two-tier)
+    log_info "step 4/6: checking for dirty files..."
     if ! sync_check_dirty "$name"; then
         return 1
     fi
 
-    # Step 4: Pull with rebase
-    log_info "step 4/5: pulling remote changes..."
+    # Step 5: Pull with rebase
+    log_info "step 5/6: pulling remote changes..."
     sync_pull "$dry_run"
 
-    # Step 5: Push
-    log_info "step 5/5: pushing local changes..."
+    # Step 6: Push
+    log_info "step 6/6: pushing local changes..."
     sync_push "$dry_run"
 
     # Report
