@@ -75,7 +75,7 @@ capture_dotfiles() {
         fi
 
         cp "$f" "${host_files_dir}/${dest_name}"
-        ((captured++))
+        captured=$((captured + 1))
     done
 
     # Generate files.yaml with copy entries for each captured file
