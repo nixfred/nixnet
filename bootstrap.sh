@@ -100,7 +100,17 @@ info "step 3/4: setting up world..."
 
 if [[ -d "${WORLD_DIR}/.git" ]]; then
     info "world exists — pulling latest..."
+    local_changes=false
+    if ! git -C "$WORLD_DIR" diff --quiet 2>/dev/null || ! git -C "$WORLD_DIR" diff --cached --quiet 2>/dev/null; then
+        info "stashing local changes..."
+        git -C "$WORLD_DIR" stash --quiet
+        local_changes=true
+    fi
     git -C "$WORLD_DIR" pull --rebase --quiet
+    if $local_changes; then
+        git -C "$WORLD_DIR" stash pop --quiet
+        info "local changes restored"
+    fi
     ok "world updated"
 elif [[ -n "$WORLD_URL" ]]; then
     info "cloning world..."
