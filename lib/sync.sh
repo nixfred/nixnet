@@ -84,11 +84,22 @@ sync_validate() {
 sync_auto_commit() {
     local name="$1" dry_run="$2"
 
-    # Only these two files may be auto-committed
+    # Host files that may be auto-committed (state + captured environment)
     local -a state_files=(
         "hosts/${name}/identity.yaml"
         "hosts/${name}/claim-history.txt"
+        "hosts/${name}/packages.yaml"
+        "hosts/${name}/files.yaml"
     )
+
+    # Also include any captured dotfiles
+    if [[ -d "${NIXNET_WORLD}/hosts/${name}/files" ]]; then
+        local f
+        for f in "${NIXNET_WORLD}/hosts/${name}/files"/*; do
+            [[ -f "$f" ]] || continue
+            state_files+=("hosts/${name}/files/$(basename "$f")")
+        done
+    fi
 
     local -a changed=()
     for f in "${state_files[@]}"; do
