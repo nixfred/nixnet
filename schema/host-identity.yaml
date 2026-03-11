@@ -82,12 +82,15 @@ schema:
 #   - Service management (systemd units)
 #   - Monitoring, alerting, or dashboards
 #   - Tailscale or SSH configuration (treated as existing infrastructure)
+#   - SSH keys or GitHub access (user prerequisite)
 #
 # ══════════════════════════════════════════════
 
 # Notes:
 # - Identity name always equals hostname
 # - A host identity can exist without a claim (lifecycle: dormant)
+# - Dormant identities are auto-reclaimed when a new machine enrolls with the same hostname
+# - Only active identities with foreign claims require --force or interactive confirmation
 # - Destroying a VM moves identity to dormant, NOT destroyed
 # - Only explicit 'nixnet lifecycle set destroyed' terminates an identity
 # - The claim block is updated when a new machine claims the identity

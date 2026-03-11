@@ -23,6 +23,7 @@ The engine locates the world via: (1) `NIXNET_WORLD` env var, (2) saved path in 
 - **Machine instance**: The actual running Linux box that claims a host identity. Identified by `/etc/machine-id`.
 - **Layers**: Config resolves as `global → host` with simple union merging (packages) and last-layer-wins (files). No roles.
 - **Enrollment**: Idempotent action that brings a machine into nixnet or refreshes an existing enrollment. Bootstrap script handles everything from a single curl command.
+- **Dormant reclaim**: When a machine enrolls and a dormant identity with the same hostname exists, the identity is automatically reclaimed — no flags or prompts required.
 
 ### Key Design Decisions
 
@@ -34,8 +35,10 @@ The engine locates the world via: (1) `NIXNET_WORLD` env var, (2) saved path in 
 - **Apply and sync are separate.** `apply` = local convergence (no network). `sync` = git coordination (explicit network).
 - **Auto-commit for state files only.** `sync` auto-commits `identity.yaml` and `claim-history.txt`. Human-curated config is never auto-committed.
 - **Enrollment is idempotent.** Running it again self-heals — updates claim, refreshes config, re-applies.
+- **Dormant identities auto-reclaim.** A new machine enrolling with the same hostname as a dormant identity reclaims it automatically. Only active identities with foreign claims require `--force` or interactive confirmation.
 - **No secrets in v1.** The `secrets/` directory exists in the schema but apply/enroll code does not touch it.
 - **Tailscale and SSH are existing infrastructure.** nixnet stands on top of them, does not manage them.
+- **SSH key setup is a user prerequisite.** nixnet assumes the machine can clone the private world repo. It does not manage SSH keys or GitHub access.
 
 ## Commands
 
@@ -43,7 +46,7 @@ The engine locates the world via: (1) `NIXNET_WORLD` env var, (2) saved path in 
 # Validate bash syntax across all modules
 bash -n lib/*.sh && bash -n bin/nixnet
 
-# Bootstrap a new machine (one command)
+# Bootstrap a new machine (one command — requires SSH key for world repo)
 curl -sL https://raw.githubusercontent.com/nixfred/nixnet/main/bootstrap.sh | bash -s -- git@github.com:nixfred/nixnet-world.git
 
 # Run CLI (from repo root)
@@ -89,18 +92,22 @@ files.yaml       # file placement manifest (src, dest, method, owner, mode)
 hooks/           # executable scripts named by phase (post-enroll, post-apply)
 ```
 
-## Proven (Proxmox Test 2026-03-08)
+## Proven (Proxmox Tests 2026-03-08 and 2026-03-10)
 
-The following were validated on two disposable Ubuntu 24.04 VMs (fresh enroll on VM1, reclaim on VM2):
+Validated across two rounds of testing on disposable Ubuntu 24.04 VMs:
 
 - Fresh enrollment creates identity with claim block and applies layered config
 - Convergent apply is idempotent (second apply changes nothing)
-- Doctor passes on both fresh and reclaimed machines
+- Doctor passes 8/8 on fresh, re-enrolled, and reclaimed machines
+- Re-enrollment is idempotent — refreshes claim, re-applies config, archives old claim
 - Lifecycle transitions (`active → dormant → active`) work correctly
-- Identity persists after machine destruction (VM1 destroyed, VM2 reclaimed)
-- Reclaim detects foreign claim, archives old claim to `claim-history.txt`, warns before overwriting
-- Host identity is independent of OS hostname (both VMs were `ub`, identity was `nixtest`)
+- Dormant identities auto-reclaim via bootstrap without interactive prompts or --force
+- Foreign claims are archived to `claim-history.txt` with timestamps
+- Identity persists after machine destruction (VM destroyed, new VM reclaimed identity)
 
 ## What nixnet Does NOT Manage (v1)
 
-VM creation, package removal, drift detection, backups, secrets/vaults, remote orchestration, systemd services, monitoring, Tailscale/SSH configuration.
+VM creation, package removal, drift detection, backups, secrets/vaults, remote orchestration, systemd services, monitoring, Tailscale/SSH configuration, SSH keys or GitHub access.
+
+# currentDate
+Today's date is 2026-03-10.
