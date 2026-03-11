@@ -15,7 +15,7 @@ nixnet treats machines as replaceable vessels and host identities as persistent 
 ### One Command
 
 ```bash
-curl -sL https://raw.githubusercontent.com/nixfred/nixnet/main/bootstrap.sh | bash -s -- git@github.com:YOUR/world-repo.git
+curl -sL https://raw.githubusercontent.com/nixfred/nixnet/main/bootstrap.sh | bash -s -- git@github.com:nixfred/nixnet-world.git
 ```
 
 That's it. The bootstrap script:
